@@ -24,16 +24,12 @@ def movie(key):
     return render_template('video.html', movie=movie)
 
 class Movie():
-    title = 'Movie title'
-    path = ''
-    key = ''
-    subtitles = []
-    videoPath = ''
-
     def __init__(self, path, expand=False):
         self.path = path
         self.title = os.path.basename(path)
         self.key = urllib.parse.quote(path.replace('/', '_-'))
+        self.subtitles = []
+        self.videoPath = ''
         if expand:
             movieDirFiles = os.listdir(self.path)
             app.logger.debug('Number of files in movie dir:' + str(len(movieDirFiles)))
