@@ -5,13 +5,20 @@ from flask import Flask, render_template
 app = Flask(__name__)
 
 logging.getLogger().setLevel(logging.DEBUG)
+baseDir = 'static/ms/'
+
 @app.route('/')
-def movies():
-    baseDir = 'static/ms/movies'
-    movieDirs = os.listdir(baseDir)
+def root():
+    return movies(baseDir)
+
+@app.route('/<key>')
+def movies(key):
+    moviePath = urllib.parse.unquote(key.replace('_-', '/'))
+
+    movieDirs = os.listdir(moviePath)
     movies = []
     for movieDir in movieDirs:
-        movie = Movie(baseDir + '/' + movieDir)
+        movie = Movie(moviePath + '/' + movieDir, True)
         movies.append(movie)
 
     return render_template('movies.html', movies=movies)
@@ -30,6 +37,8 @@ class Movie():
         self.key = urllib.parse.quote(path.replace('/', '_-'))
         self.subtitles = []
         self.videoPath = ''
+        self.ismovie = False
+        self.url = '/' + self.key
         if expand:
             movieDirFiles = os.listdir(self.path)
             app.logger.debug('Number of files in movie dir:' + str(len(movieDirFiles)))
@@ -44,6 +53,8 @@ class Movie():
                         app.logger.debug('Handling extension: ' + ext)
                         if ext == '.mp4':
                             self.videoPath = urlPath
+                            self.ismovie = True
+                            self.url = '/video/' + self.key
                         if ext == '.vtt':
                             subPath = urlPath
                             subLabel = 'Unknown'

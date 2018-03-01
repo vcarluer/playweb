@@ -4,10 +4,11 @@
 		<title>PLAY!</title>
 	</head>
 	<body>
+		<a href='/'>HOME</a>
 		<h1>Movies</h1>
 		<ul>
 			{% for movie in movies %}
-			<li><a href='/video/{{ movie.key }}'>{{ movie.title }}</a></li>
+			<li><a href='{{ movie.url }}'>{{ movie.title }}</a></li>
 			{% endfor %}
 		</ul>
 	</body>
