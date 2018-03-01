@@ -1,0 +1,11 @@
+::cue {
+	outline-width: 10px;
+	outline-color: black;
+	background-color: red;
+	font-size: 200%;
+}
+
+.vjs-text-track-display div {
+	  font-size: 200% !important;
+	  font-color: red !important;
+  }
