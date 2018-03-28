@@ -21,7 +21,7 @@ def directory(key):
     if len(dirInfo.movies) == 1:
         return info(dirInfo.movies[0].key)
     else:
-        return render_template('movies.html', dirs=dirInfo.directories, movies=dirInfo.movies)
+        return render_template('movies.html', name=dirInfo.name, dirs=dirInfo.directories, movies=dirInfo.movies)
 
 @app.route('/video/<key>')
 def movie(key):
@@ -91,11 +91,14 @@ class MovieInfo():
 
 class TmdbInfo():
     tmdbapi = '372020cd232e0239905b1b2ad473c208'
-    searchUrl = Template('https://api.themoviedb.org/3/search/movie?api_key=$apikey&query=$query')
+    searchUrl = Template('https://api.themoviedb.org/3/search/$mtype?api_key=$apikey&query=$query')
+    posterUrl = Template('https://image.tmdb.org/t/p/w185$poster')
+    mediaUrl = Template('https://www.themoviedb.org/$mtype/$tmdbid')
 
-    def __init__(self, name):
+    def __init__(self, name, mtype = 'movie'):
+        self.mtype = mtype
         self.origName = name
-        r = self.search_tmdb(name)
+        r = self.search_tmdb(name, self.mtype)
         self.tmdb = r
         self.parse_result(r)
 
@@ -107,32 +110,89 @@ class TmdbInfo():
             app.logger.debug('themoviedb id: ' + str(self.id))
             self.poster = r['results'][0]['poster_path']
             app.logger.debug('themoviedb poster: ' + str(self.poster))
+            self.url = TmdbInfo.mediaUrl.substitute(mtype=self.mtype,tmdbid=self.id)
+            self.posterUrl = TmdbInfo.posterUrl.substitute(poster=self.poster)
         else:
             self.id = -1
             self.poster = ''
+            self.url = ''
+            self.posterUrl = ''
 
-    def search_tmdb(self, name):
-        searchName = name
-        datePos = searchName.find(' (')
+    def search_tmdb(self, name, mtype = 'movie'):
+        self.searchName = name
+        datePos = self.searchName.find(' (')
         if datePos > -1:
-            searchName = searchName[:datePos]
+            self.searchName = self.searchName[:datePos]
 
-        nameEscape = urllib.parse.quote(searchName)
-        searchQuery = TmdbInfo.searchUrl.substitute(apikey=TmdbInfo.tmdbapi, query=nameEscape)
+        nameEscape = urllib.parse.quote(self.searchName)
+        searchQuery = TmdbInfo.searchUrl.substitute(mtype=mtype, apikey=TmdbInfo.tmdbapi, query=nameEscape)
         app.logger.debug('querying ' + searchQuery)
         result = requests.get(searchQuery)
         app.logger.debug(result.json())
         r = json.loads(result.content.decode('utf-8'))
         return r
 
+class TmdbSeasonInfo():
+    seasonGetUrl = Template('https://api.themoviedb.org/3/tv/$tv_id/season/$season_number?api_key=$apikey')
+    seasonUrl = Template('https://www.themoviedb.org/$mtype/$tmdbid/season/$season')
+
+    def __init__(self, tvid, season):
+        self.tvid = tvid
+        self.season = season
+        self.get_season()
+        self.parse_result()
+
+    def get_season(self):
+        getQuery = TmdbSeasonInfo.seasonGetUrl.substitute(tv_id=self.tvid, season_number=self.season,apikey=TmdbInfo.tmdbapi)
+        app.logger.debug('querying ' + getQuery)
+        result = requests.get(getQuery)
+        app.logger.debug(result.json())
+        self.tmdb = json.loads(result.content.decode('utf-8'))
+
+    def parse_result(self):
+        if not self.tmdb['id'] == None:
+            self.id = self.tmdb['id']
+            app.logger.debug('setting season id to ' + str(self.id))
+            self.url = TmdbSeasonInfo.seasonUrl.substitute(mtype='tv',tmdbid=self.tvid,season=str(self.season))
+        else:
+            self.url = ''
+
+        if not self.tmdb['poster_path'] == None:
+            self.poster = self.tmdb['poster_path']
+            app.logger.debug('setting season poster to ' + self.poster)
+            self.posterUrl = TmdbInfo.posterUrl.substitute(poster=self.poster)
+        else:
+            self.posterUrl = ''
+
 class DirectoryItem():
     def __init__(self, name, path):
         self.key = getKey(path)
         self.name = name
         self.path = path
+
+        seasonPos = name.find('Season ')
+        if not seasonPos == -1:
+            self.season = name[len('Season '):]
+            self.showName = os.path.basename(os.path.dirname(self.path))
+            self.dirName = self.name
+            self.istv = True
+            self.mtype = 'tv'
+        else:
+            self.showName = self.name
+            self.istv = False
+            self.season = -1
+            self.mtype = 'movie'
+
         # Search for jackett here
-        if not os.path.dirname(path) + '/' == baseDir:
-            self.tmdb = TmdbInfo(self.name)
+        if not os.path.dirname(self.path) + '/' == baseDir:
+            self.tmdb = TmdbInfo(self.showName, self.mtype)
+            self.url = self.tmdb.url
+            self.posterUrl = self.tmdb.posterUrl
+            if self.istv and not self.tmdb.id == -1:
+                self.tmdbtv = TmdbSeasonInfo(self.tmdb.id, self.season)
+                if not self.tmdb.url == '':
+                    self.url = self.tmdbtv.url
+                    self.posterUrl = self.tmdbtv.posterUrl
 
 class MovieItem():
     def __init__(self, base, name, ext):
