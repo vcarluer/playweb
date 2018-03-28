@@ -1,6 +1,9 @@
 import logging
 import urllib
 import os
+from string import Template
+import requests
+import json
 from flask import Flask, render_template
 app = Flask(__name__)
 
@@ -15,8 +18,10 @@ def root():
 def directory(key):
     dirPath = getPath(key)
     dirInfo = DirectoryInfo(dirPath)
-
-    return render_template('movies.html', dirs=dirInfo.directories, movies=dirInfo.movies)
+    if len(dirInfo.movies) == 1:
+        return info(dirInfo.movies[0].key)
+    else:
+        return render_template('movies.html', dirs=dirInfo.directories, movies=dirInfo.movies)
 
 @app.route('/video/<key>')
 def movie(key):
@@ -37,6 +42,7 @@ def getKey(path):
 
 def getPath(key):
     return urllib.parse.unquote(key.replace('_-', '/'))
+
 
 class DirectoryInfo():
     def __init__(self, path):
@@ -73,12 +79,48 @@ class MovieInfo():
         self.key = getKey(path)
         self.fileName = os.path.basename(self.path)
         extsplit = os.path.splitext(self.fileName)
-        self.name = extsplit[0]
+        self.name = os.path.basename(os.path.dirname(self.path))
+        self.fileName = extsplit[0]
         self.ext = extsplit[1]
         self.subtitles = []
         self.isEpisode = False
         # Subtitles here
+
         # Other movie infos
+        self.tmdb = TmdbInfo(self.name)
+
+class TmdbInfo():
+    tmdbapi = '372020cd232e0239905b1b2ad473c208'
+    searchUrl = Template('https://api.themoviedb.org/3/search/movie?api_key=$apikey&query=$query')
+
+    def __init__(self, name):
+        self.origName = name
+        r = self.search_tmdb(name)
+        self.tmdb = r
+        self.parse_result(r)
+
+    def parse_result(self, r):
+        self.count = int(r['total_results'])
+        app.logger.debug('total result: ' + str(self.count))
+        if self.count > 0:
+            self.id = r['results'][0]['id']
+            app.logger.debug('themoviedb id: ' + str(self.id))
+            self.poster = r['results'][0]['poster_path']
+            app.logger.debug('themoviedb poster: ' + str(self.poster))
+
+    def search_tmdb(self, name):
+        searchName = name
+        datePos = searchName.find(' (')
+        if datePos > -1:
+            searchName = searchName[:datePos]
+
+        nameEscape = urllib.parse.quote(searchName)
+        searchQuery = TmdbInfo.searchUrl.substitute(apikey=TmdbInfo.tmdbapi, query=nameEscape)
+        app.logger.debug('querying ' + searchQuery)
+        result = requests.get(searchQuery)
+        app.logger.debug(result.json())
+        r = json.loads(result.content.decode('utf-8'))
+        return r
 
 class DirectoryItem():
     def __init__(self, name, path):

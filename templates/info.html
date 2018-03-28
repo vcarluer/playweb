@@ -6,8 +6,12 @@
 	<body>
 	<a href="/">Back</a>
 	<div>
-		<h1>{{ movie.name }}</h1>
-		<a href="/video/{{ movie.key }}">PLAY</a>
+		<a href="https://www.themoviedb.org/movie/{{ movie.tmdb.id }}">
+			<h1>{{ movie.name }}</h1>
+		</a>
+		<a href="/video/{{ movie.key }}">
+			<img src="https://image.tmdb.org/t/p/w185{{ movie.tmdb.poster }}"/>
+		</BR>
 	</div>
 	</body>
 </html>
