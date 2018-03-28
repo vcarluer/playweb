@@ -6,8 +6,15 @@
 	</head>
 	<body>
 		<a href='/'>HOME</a>
+		<h1>{{ info.name }}</h1>
+		{% if info.url != '' %}
+		<a href='{{ info.url }}' target='_blank'>
+		{% if info.posterUrl != '' %}
+		<img src='{{ info.posterUrl }}'/>
+		{% endif %}
+		</a>
+		{% endif %}
 		{% if dirs|length > 0 %}
-		<h1>{{ name }}</h1>
 		<!--<h2>Directories</h2>-->
 		<ul>
 			{% for dir in dirs %}
@@ -17,7 +24,7 @@
 			{% endif %}
 			{{ dir.name }}</a>
 			{% if dir.tmdbid != -1 %}
-			<a href="{{ dir.url }}">INFO</a>
+			<a target='_blank' href="{{ dir.url }}">INFO</a>
 			{% endif %}
 			</li>
 			{% endfor %}
@@ -34,7 +41,7 @@
 					{{ movie.name }}
 			</a></BR>
 			{% if movie.tmdb.id != -1 %}
-			<a href="https://www.themoviedb.org/movie/{{ movie.tmdb.id }}">INFO</a>
+			<a target='_blank' href="https://www.themoviedb.org/movie/{{ movie.tmdb.id }}">INFO</a>
 			{% endif %}
 			</li>
 			{% endfor %}

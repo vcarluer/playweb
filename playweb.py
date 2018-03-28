@@ -21,7 +21,7 @@ def directory(key):
     if len(dirInfo.movies) == 1:
         return info(dirInfo.movies[0].key)
     else:
-        return render_template('movies.html', name=dirInfo.name, dirs=dirInfo.directories, movies=dirInfo.movies)
+        return render_template('movies.html', info=dirInfo.info, dirs=dirInfo.directories, movies=dirInfo.movies)
 
 @app.route('/video/<key>')
 def movie(key):
@@ -49,7 +49,9 @@ class DirectoryInfo():
         self.directories = []
         self.movies = []
         self.name = os.path.basename(path)
+        self.path = path
         self.key = getKey(path)
+        self.info = DirectoryItem(self.name, self.path)
 
         for subItem in os.listdir(path):
             app.logger.debug('Handling item: ' + subItem)
@@ -179,16 +181,21 @@ class DirectoryItem():
             self.mtype = 'tv'
         else:
             self.showName = self.name
-            self.istv = False
             self.season = -1
+            self.istv = False
             self.mtype = 'movie'
+            for subdir in os.listdir(self.path):
+                if subdir.startswith('Season '):
+                    self.istv = True
+                    self.mtype = 'tv'
+                    break
 
         # Search for jackett here
         if not os.path.dirname(self.path) + '/' == baseDir:
             self.tmdb = TmdbInfo(self.showName, self.mtype)
             self.url = self.tmdb.url
             self.posterUrl = self.tmdb.posterUrl
-            if self.istv and not self.tmdb.id == -1:
+            if not self.season == -1:
                 self.tmdbtv = TmdbSeasonInfo(self.tmdb.id, self.season)
                 if not self.tmdb.url == '':
                     self.url = self.tmdbtv.url
