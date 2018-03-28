@@ -107,6 +107,9 @@ class TmdbInfo():
             app.logger.debug('themoviedb id: ' + str(self.id))
             self.poster = r['results'][0]['poster_path']
             app.logger.debug('themoviedb poster: ' + str(self.poster))
+        else:
+            self.id = -1
+            self.poster = ''
 
     def search_tmdb(self, name):
         searchName = name
@@ -128,6 +131,8 @@ class DirectoryItem():
         self.name = name
         self.path = path
         # Search for jackett here
+        if not os.path.dirname(path) + '/' == baseDir:
+            self.tmdb = TmdbInfo(self.name)
 
 class MovieItem():
     def __init__(self, base, name, ext):

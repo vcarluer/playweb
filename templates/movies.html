@@ -10,7 +10,12 @@
 		<h1>Directories</h1>
 		<ul>
 			{% for dir in dirs %}
-			<li><a href='/{{ dir.key }}'>{{ dir.name }}</a></li>
+			<li><a href='/{{ dir.key }}'>
+			{% if dir.tmdb and dir.tmdb.poster != '' %}
+				<img src="https://image.tmdb.org/t/p/w185{{ dir.tmdb.poster }}"/>
+			{% endif %}
+			{{ dir.name }}</a>
+			</li>
 			{% endfor %}
 		</ul>
 		{% endif %}
@@ -18,7 +23,13 @@
 		<h1>Movies</h1>
 		<ul>
 			{% for movie in movies %}
-			<li><a href='/info/{{ movie.key }}'>{{ movie.name }}</a></li>
+			<li><a href='/info/{{ movie.key }}'>
+					{% if movie.tmdb and movie.tmdb.poster != '' %}
+					<img src="https://image.tmdb.org/t/p/w185{{ movie.tmdb.poster }}"/>
+					{% endif %}
+					{{ movie.name }}
+			</a></BR>
+			</li>
 			{% endfor %}
 		</ul>
 		{% endif %}
