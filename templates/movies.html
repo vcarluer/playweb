@@ -6,12 +6,15 @@
 	</head>
 	<body>
 		<a href='/'>HOME</a>
+		{% if dirs|length > 0 %}
 		<h1>Directories</h1>
 		<ul>
 			{% for dir in dirs %}
 			<li><a href='/{{ dir.key }}'>{{ dir.name }}</a></li>
 			{% endfor %}
 		</ul>
+		{% endif %}
+		{% if movies|length > 0 %}
 		<h1>Movies</h1>
 		<ul>
 			{% for movie in movies %}
