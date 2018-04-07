@@ -6,11 +6,13 @@
 	<body>
 	<a href="/">Back</a>
 	<div>
-		<a target='_blank' href="https://www.themoviedb.org/movie/{{ movie.tmdb.id }}">
+		<a target='_blank' href="{{ movie.url }}">
 			<h1>{{ movie.name }}</h1>
 		</a>
 		<a href="/video/{{ movie.key }}">
-			<img src="https://image.tmdb.org/t/p/w185{{ movie.tmdb.poster }}"/>
+			{% if movie.poster != '' %}
+			<img src="{{ movie.posterUrl }}"/>
+			{% endif %}
 		</BR>
 	</div>
 	</body>

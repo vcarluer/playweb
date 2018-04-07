@@ -1,10 +1,11 @@
+import re
 import logging
 import urllib
 import os
 from string import Template
 import requests
 import json
-from flask import Flask, render_template
+from flask import Flask, render_template, abort
 app = Flask(__name__)
 
 logging.getLogger().setLevel(logging.DEBUG)
@@ -16,8 +17,11 @@ def root():
 
 @app.route('/<key>')
 def directory(key):
+    if key == 'favicon.ico':
+        abort(404)
+
     dirPath = getPath(key)
-    dirInfo = DirectoryInfo(dirPath)
+    dirInfo = DirectoryInfo(dirPath, hd=True)
     if len(dirInfo.movies) == 1:
         return info(dirInfo.movies[0].key)
     else:
@@ -45,13 +49,13 @@ def getPath(key):
 
 
 class DirectoryInfo():
-    def __init__(self, path):
+    def __init__(self, path, hd=False):
         self.directories = []
         self.movies = []
         self.name = os.path.basename(path)
         self.path = path
         self.key = getKey(path)
-        self.info = DirectoryItem(self.name, self.path)
+        self.info = DirectoryItem(self.name, self.path, hd)
 
         for subItem in os.listdir(path):
             app.logger.debug('Handling item: ' + subItem)
@@ -80,26 +84,85 @@ class MovieInfo():
         self.path = path
         self.key = getKey(path)
         self.fileName = os.path.basename(self.path)
+        self.dirPath = os.path.dirname(self.path)
         extsplit = os.path.splitext(self.fileName)
         self.name = os.path.basename(os.path.dirname(self.path))
         self.fileName = extsplit[0]
         self.ext = extsplit[1]
-        self.subtitles = []
-        self.isEpisode = False
+        self.info = DirectoryItem(self.name, self.dirPath, hd=True)
+        if self.info.istv:
+            self.name = self.getEpisodeName()
         # Subtitles here
-
+        self.subtitles = self.getSubtitles(self.dirPath)
         # Other movie infos
-        self.tmdb = TmdbInfo(self.name)
+        self.url = self.info.url
+        self.posterUrl = self.info.posterUrl
+
+    def getEpisodeName(self):
+        p = re.compile('.* - S(\d\d)E(\d\d) - .*')
+        m = p.match(self.fileName)
+        self.episode = int(m.group(2))
+        app.logger.debug('Episode for ' + self.fileName + ' is ' + str(self.episode))
+        return self.info.tmdbtv.tmdb['episodes'][self.episode - 1]['name']
+
+    def getSubtitles(self, dirPath):
+        subtitles = []
+        movieDirFiles = os.listdir(dirPath)
+        app.logger.debug('Number of files in movie dir:' + str(len(movieDirFiles)))
+        for movieFile in movieDirFiles:
+            mfPath = dirPath+ '/' + movieFile
+            urlPath = '/' + mfPath
+            if os.path.isfile(mfPath):
+                app.logger.debug('Handling file: ' + mfPath)
+                extsplit = os.path.splitext(movieFile)
+                if len(extsplit) > 1:
+                    ext = extsplit[1]
+                    app.logger.debug('Handling extension: ' + ext)
+                    if ext == '.vtt':
+                        subPath = urlPath
+                        subLabel = 'Unknown'
+                        subDefault = ''
+                        subLang = 'en'
+                        if movieFile.find('.fr') != -1:
+                            subLabel = 'French'
+                            subDefault = 'default'
+                            subLang = 'fr'
+                        if movieFile.find('.en') != -1:
+                            subLabel = 'English'
+
+                        subtitle = Subtitle(subPath, subLabel, subDefault, subLang)
+                        app.logger.debug('Adding subtitle ' + subLabel + ': ' + subPath)
+                        subtitles.append(subtitle)
+
+        return subtitles
+
+def getposterw(hd):
+    if hd:
+        '''
+"poster_sizes": [
+  "w92",
+  "w154",
+  "w185",
+  "w342",
+  "w500",
+  "w780",
+  "original"
+]
+        '''
+        return 780
+    else:
+        return 185
 
 class TmdbInfo():
     tmdbapi = '372020cd232e0239905b1b2ad473c208'
     searchUrl = Template('https://api.themoviedb.org/3/search/$mtype?api_key=$apikey&query=$query')
-    posterUrl = Template('https://image.tmdb.org/t/p/w185$poster')
+    posterUrl = Template('https://image.tmdb.org/t/p/w$width$poster')
     mediaUrl = Template('https://www.themoviedb.org/$mtype/$tmdbid')
 
-    def __init__(self, name, mtype = 'movie'):
+    def __init__(self, name, mtype = 'movie', hd=False):
         self.mtype = mtype
         self.origName = name
+        self.posterw = getposterw(hd)
         r = self.search_tmdb(name, self.mtype)
         self.tmdb = r
         self.parse_result(r)
@@ -113,7 +176,8 @@ class TmdbInfo():
             self.poster = r['results'][0]['poster_path']
             app.logger.debug('themoviedb poster: ' + str(self.poster))
             self.url = TmdbInfo.mediaUrl.substitute(mtype=self.mtype,tmdbid=self.id)
-            self.posterUrl = TmdbInfo.posterUrl.substitute(poster=self.poster)
+            self.posterUrl = TmdbInfo.posterUrl.substitute(poster=self.poster, width=self.posterw)
+            app.logger.debug('setting poster url to ' + self.posterUrl)
         else:
             self.id = -1
             self.poster = ''
@@ -138,9 +202,10 @@ class TmdbSeasonInfo():
     seasonGetUrl = Template('https://api.themoviedb.org/3/tv/$tv_id/season/$season_number?api_key=$apikey')
     seasonUrl = Template('https://www.themoviedb.org/$mtype/$tmdbid/season/$season')
 
-    def __init__(self, tvid, season):
+    def __init__(self, tvid, season, hd=False):
         self.tvid = tvid
         self.season = season
+        self.posterw = getposterw(hd)
         self.get_season()
         self.parse_result()
 
@@ -161,13 +226,13 @@ class TmdbSeasonInfo():
 
         if not self.tmdb['poster_path'] == None:
             self.poster = self.tmdb['poster_path']
-            app.logger.debug('setting season poster to ' + self.poster)
-            self.posterUrl = TmdbInfo.posterUrl.substitute(poster=self.poster)
+            self.posterUrl = TmdbInfo.posterUrl.substitute(poster=self.poster, width=self.posterw)
+            app.logger.debug('setting season poster url to ' + self.posterUrl)
         else:
             self.posterUrl = ''
 
 class DirectoryItem():
-    def __init__(self, name, path):
+    def __init__(self, name, path, hd=False):
         self.key = getKey(path)
         self.name = name
         self.path = path
@@ -192,11 +257,11 @@ class DirectoryItem():
 
         # Search for jackett here
         if not os.path.dirname(self.path) + '/' == baseDir:
-            self.tmdb = TmdbInfo(self.showName, self.mtype)
+            self.tmdb = TmdbInfo(self.showName, self.mtype, hd)
             self.url = self.tmdb.url
             self.posterUrl = self.tmdb.posterUrl
             if not self.season == -1:
-                self.tmdbtv = TmdbSeasonInfo(self.tmdb.id, self.season)
+                self.tmdbtv = TmdbSeasonInfo(self.tmdb.id, self.season, hd)
                 if not self.tmdb.url == '':
                     self.url = self.tmdbtv.url
                     self.posterUrl = self.tmdbtv.posterUrl
