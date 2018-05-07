@@ -14,3 +14,30 @@ body {
 	background-color: black;
 	color: white;
 }
+
+.dirDiv {
+	border-width: 1px;
+	border-color: orange;
+	border-style: solid;
+	float: left;
+	padding: 5px;
+	margin: 5px;
+}
+.movieDiv {
+	border-width: 1px;
+	border-color: orange;
+	border-style: solid;
+	float: left;
+	padding: 5px;
+	margin: 5px;
+}
+
+.divSeason {
+	display: block;
+	width: 100%;
+	text-align: center;
+}
+
+.divSeason img {
+	height: 240px;
+}
