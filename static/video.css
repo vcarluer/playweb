@@ -1,0 +1,28 @@
+/*::cue {
+	outline-width: 10px;
+	outline-color: black;
+	background-color: red;
+	font-size: 200%;
+}
+
+.vjs-text-track-display div {
+	  font-size: 200% !important;
+	  font-color: red !important;
+  }
+  */
+html,body {
+	background-color: black;
+	color: white;
+	height: 100%;
+	margin: 0px;
+	padding: 0px;
+	text-align: center;
+}
+/*
+.divVideo {
+	height: 100vh;
+}
+*/
+#player {
+	width: 100%;
+}

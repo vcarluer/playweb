@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<link rel="stylesheet" href="/static/play.css" type="text/css" />
+		<link rel="stylesheet" href="/static/video.css" type="text/css" />
 		<script src="/static/video.js" language="javascript"></script>
 	</head>
 	<body>
-	<a href="/">Back</a>
-<video id='player' controls="controls" width="100%" autoplay >
+		<div class="divVideo">
+<video id='player' controls="controls" autoplay >
 	<source src="/{{ movie.path }}" type="video/mp4" />
 	{% for vtt in movie.subtitles%}
 	<track src="{{ vtt.path }}" kind="subtitles" srclang="{{ vtt.lang }}" label="{{ vtt.label }}" {{ vtt.default }}/>
 	{% endfor %}
 	Your browser does not support HTML5 video.
+		</div>
 </video>
 	</body>
 </html>

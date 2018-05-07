@@ -12,6 +12,12 @@ var saveFrequency = 10; // in milliseconds
 
 function init() {
 	var player = document.getElementById('player');
+	// Does not work: must be trigered by button
+	/*
+	if (player.requestFullscreen) {
+		player.requestFullscreen();
+	}*/
+	// Need to be specialized per file (or at least delete if not the same
 	player.ontimeupdate = function() {
 		newTime = player.currentTime;
 		if (Math.abs(newTime - lastSavedTime) > saveFrequency) {
