@@ -158,6 +158,7 @@ class TmdbInfo():
     searchUrl = Template('https://api.themoviedb.org/3/search/$mtype?api_key=$apikey&query=$query')
     posterUrl = Template('https://image.tmdb.org/t/p/w$width$poster')
     mediaUrl = Template('https://www.themoviedb.org/$mtype/$tmdbid')
+    cacheDir = '/var/local/localtmdb/'
 
     def __init__(self, name, mtype = 'movie', hd=False):
         self.mtype = mtype
@@ -185,17 +186,27 @@ class TmdbInfo():
             self.posterUrl = ''
 
     def search_tmdb(self, name, mtype = 'movie'):
-        self.searchName = name
-        datePos = self.searchName.find(' (')
-        if datePos > -1:
-            self.searchName = self.searchName[:datePos]
+        r = None
+        cacheFile = TmdbInfo.cacheDir + name
+        if os.path.isfile(cacheFile):
+            app.logger.debug('reading tmdbinfo cache in ' + cacheFile)
+            with open(cacheFile) as json_data:
+                r = json.load(json_data)
+        else:
+            self.searchName = name
+            datePos = self.searchName.find(' (')
+            if datePos > -1:
+                self.searchName = self.searchName[:datePos]
 
-        nameEscape = urllib.parse.quote(self.searchName)
-        searchQuery = TmdbInfo.searchUrl.substitute(mtype=mtype, apikey=TmdbInfo.tmdbapi, query=nameEscape)
-        app.logger.debug('querying ' + searchQuery)
-        result = requests.get(searchQuery)
-        app.logger.debug(result.json())
-        r = json.loads(result.content.decode('utf-8'))
+            nameEscape = urllib.parse.quote(self.searchName)
+            searchQuery = TmdbInfo.searchUrl.substitute(mtype=mtype, apikey=TmdbInfo.tmdbapi, query=nameEscape)
+            app.logger.debug('querying ' + searchQuery)
+            result = requests.get(searchQuery)
+            app.logger.debug(result.json())
+            app.logger.debug('dumping tmdbinfo cache in ' + cacheFile)
+            r = json.loads(result.content.decode('utf-8'))
+            with open(cacheFile, 'w') as outFile:
+                json.dump(r, outFile)
         return r
 
 class TmdbSeasonInfo():
@@ -210,11 +221,22 @@ class TmdbSeasonInfo():
         self.parse_result()
 
     def get_season(self):
-        getQuery = TmdbSeasonInfo.seasonGetUrl.substitute(tv_id=self.tvid, season_number=self.season,apikey=TmdbInfo.tmdbapi)
-        app.logger.debug('querying ' + getQuery)
-        result = requests.get(getQuery)
-        app.logger.debug(result.json())
-        self.tmdb = json.loads(result.content.decode('utf-8'))
+        r = None
+        cacheFile = TmdbInfo.cacheDir + str(self.tvid) + '-' + str(self.season)
+        if os.path.isfile(cacheFile):
+            app.logger.debug('reading tmdbinfo cache in ' + cacheFile)
+            with open(cacheFile) as json_data:
+                r = json.load(json_data)
+        else:
+            getQuery = TmdbSeasonInfo.seasonGetUrl.substitute(tv_id=self.tvid, season_number=self.season,apikey=TmdbInfo.tmdbapi)
+            app.logger.debug('querying ' + getQuery)
+            result = requests.get(getQuery)
+            app.logger.debug(result.json())
+            app.logger.debug('dumping tmdbinfo cache in ' + cacheFile)
+            r = json.loads(result.content.decode('utf-8'))
+            with open(cacheFile, 'w') as outFile:
+                json.dump(r, outFile)
+        self.tmdb = r
 
     def parse_result(self):
         if not self.tmdb['id'] == None:
@@ -236,6 +258,8 @@ class DirectoryItem():
         self.key = getKey(path)
         self.name = name
         self.path = path
+        self.url = ''
+        self.posterUrl = ''
 
         seasonPos = name.find('Season ')
         if not seasonPos == -1:
