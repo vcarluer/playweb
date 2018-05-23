@@ -71,7 +71,7 @@ class DirectoryInfo():
                     name = extsplit[0]
                     ext = extsplit[1]
                     app.logger.debug('Handling extension: ' + ext)
-                    if ext == '.mp4':
+                    if ext == '.mp4' or ext == '.webm':
                         movieItem = MovieItem(path, name, ext)
                         self.movies.append(movieItem)
 
@@ -99,7 +99,7 @@ class MovieInfo():
         self.posterUrl = self.info.posterUrl
 
     def getEpisodeName(self):
-        p = re.compile('.* - S(\d\d)E(\d\d) - .*')
+        p = re.compile('.*S(\d\d)E(\d\d).*')
         m = p.match(self.fileName)
         self.episode = int(m.group(2))
         app.logger.debug('Episode for ' + self.fileName + ' is ' + str(self.episode))
