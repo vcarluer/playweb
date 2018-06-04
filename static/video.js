@@ -29,7 +29,7 @@ function init() {
 
 	var prevTime = localStorage.getItem('currentTime');
 	if (prevTime) {
-		player.currentTime = prevTime;
+		//player.currentTime = prevTime;
 		lastSavedTime = prevTime;
 	}
 }

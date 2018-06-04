@@ -45,6 +45,8 @@ a:hover {
 	width: 228px;
 	height: 360px;
 	text-align: center;
+	display: block;
+	word-break: break-all;
 }
 
 .divSeason {

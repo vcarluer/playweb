@@ -71,13 +71,21 @@ class DirectoryInfo():
                     name = extsplit[0]
                     ext = extsplit[1]
                     app.logger.debug('Handling extension: ' + ext)
-                    if ext == '.mp4' or ext == '.webm':
+                    if ext == '.mp4' or ext == '.webm' or ext == '.avi':
                         movieItem = MovieItem(path, name, ext)
                         self.movies.append(movieItem)
 
+        self.directories = sorted(self.directories, key=getDirKey)
+        self.movies = sorted(self.movies, key=getMovieKey)
         app.logger.debug('Directory info count:')
         app.logger.debug('Directories:' + str(len(self.directories)))
         app.logger.debug('Movies:' + str(len(self.movies)))
+
+def getDirKey(directoryItem):
+    return directoryItem.name
+
+def getMovieKey(movieItem):
+    return movieItem.name
 
 class MovieInfo():
     def __init__(self, path):
