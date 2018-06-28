@@ -49,6 +49,25 @@ a:hover {
 	word-break: break-all;
 }
 
+.episodeWrapperDiv {
+	display: block;
+	width: 100%;
+	text-align: center;
+}
+
+.episodeDiv {
+	border-width: 1px;
+	border-color: orange;
+	border-style: dashed;
+	padding: 5px;
+	margin: 0 auto 5px auto;
+	width: 75%;
+	height: 30px;
+	text-align: left;
+	display: block;
+	word-break: break-all;
+}
+
 .divSeason {
 	display: block;
 	width: 100%;

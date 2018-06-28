@@ -60,6 +60,7 @@ class DirectoryInfo():
         for subItem in os.listdir(path):
             app.logger.debug('Handling item: ' + subItem)
             subDirPath = os.path.join(path, subItem)
+            app.logger.debug(subDirPath)
             if os.path.isdir(subDirPath):
                 app.logger.debug('Add directory ' + subItem)
                 dirItem = DirectoryItem(subItem, subDirPath)
@@ -101,7 +102,7 @@ class MovieInfo():
         if self.info.istv:
             self.name = self.getEpisodeName()
         # Subtitles here
-        self.subtitles = self.getSubtitles(self.dirPath)
+        self.subtitles = self.getSubtitles(self.dirPath, self.fileName)
         # Other movie infos
         self.url = self.info.url
         self.posterUrl = self.info.posterUrl
@@ -113,7 +114,7 @@ class MovieInfo():
         app.logger.debug('Episode for ' + self.fileName + ' is ' + str(self.episode))
         return self.info.tmdbtv.tmdb['episodes'][self.episode - 1]['name']
 
-    def getSubtitles(self, dirPath):
+    def getSubtitles(self, dirPath, fileName):
         subtitles = []
         movieDirFiles = os.listdir(dirPath)
         app.logger.debug('Number of files in movie dir:' + str(len(movieDirFiles)))
@@ -124,23 +125,29 @@ class MovieInfo():
                 app.logger.debug('Handling file: ' + mfPath)
                 extsplit = os.path.splitext(movieFile)
                 if len(extsplit) > 1:
-                    ext = extsplit[1]
-                    app.logger.debug('Handling extension: ' + ext)
-                    if ext == '.vtt':
-                        subPath = urlPath
-                        subLabel = 'Unknown'
-                        subDefault = ''
-                        subLang = 'en'
-                        if movieFile.find('.fr') != -1:
-                            subLabel = 'French'
-                            subDefault = 'default'
-                            subLang = 'fr'
-                        if movieFile.find('.en') != -1:
-                            subLabel = 'English'
+                    # Only parse same base file name ie xxx.fr.vtt: double split
+                    extsplit2 = os.path.splitext(extsplit[0])
 
-                        subtitle = Subtitle(subPath, subLabel, subDefault, subLang)
-                        app.logger.debug('Adding subtitle ' + subLabel + ': ' + subPath)
-                        subtitles.append(subtitle)
+                    if extsplit2[0] != fileName:
+                        app.logger.debug("Not the same file " + extsplit2[0] + " and " + fileName)
+                    else:
+                        ext = extsplit[1]
+                        app.logger.debug('Handling extension: ' + ext)
+                        if ext == '.vtt':
+                            subPath = urlPath
+                            subLabel = 'Unknown'
+                            subDefault = ''
+                            subLang = 'en'
+                            if movieFile.find('.fr') != -1:
+                                subLabel = 'French'
+                                subDefault = 'default'
+                                subLang = 'fr'
+                            if movieFile.find('.en') != -1:
+                                subLabel = 'English'
+
+                            subtitle = Subtitle(subPath, subLabel, subDefault, subLang)
+                            app.logger.debug('Adding subtitle ' + subLabel + ': ' + subPath)
+                            subtitles.append(subtitle)
 
         return subtitles
 
