@@ -203,11 +203,17 @@ class TmdbInfo():
     def search_tmdb(self, name, mtype = 'movie'):
         r = None
         cacheFile = TmdbInfo.cacheDir + name
-        if os.path.isfile(cacheFile):
-            app.logger.debug('reading tmdbinfo cache in ' + cacheFile)
-            with open(cacheFile) as json_data:
-                r = json.load(json_data)
-        else:
+        noCache = True
+        try:
+            if os.path.isfile(cacheFile):
+                app.logger.debug('reading tmdbinfo cache in ' + cacheFile)
+                with open(cacheFile) as json_data:
+                    r = json.load(json_data)
+                    noCache = False
+        except:
+            app.logger.error('error during cache loading')
+
+        if noCache:
             self.searchName = name
             datePos = self.searchName.find(' (')
             if datePos > -1:
