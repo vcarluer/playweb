@@ -60,6 +60,7 @@ class DirectoryInfo():
         for subItem in os.listdir(path):
             app.logger.debug('Handling item: ' + subItem)
             subDirPath = os.path.join(path, subItem)
+            app.logger.debug(subDirPath)
             if os.path.isdir(subDirPath):
                 app.logger.debug('Add directory ' + subItem)
                 dirItem = DirectoryItem(subItem, subDirPath)
@@ -71,13 +72,21 @@ class DirectoryInfo():
                     name = extsplit[0]
                     ext = extsplit[1]
                     app.logger.debug('Handling extension: ' + ext)
-                    if ext == '.mp4':
+                    if ext == '.mp4' or ext == '.webm' or ext == '.avi':
                         movieItem = MovieItem(path, name, ext)
                         self.movies.append(movieItem)
 
+        self.directories = sorted(self.directories, key=getDirKey)
+        self.movies = sorted(self.movies, key=getMovieKey)
         app.logger.debug('Directory info count:')
         app.logger.debug('Directories:' + str(len(self.directories)))
         app.logger.debug('Movies:' + str(len(self.movies)))
+
+def getDirKey(directoryItem):
+    return directoryItem.name
+
+def getMovieKey(movieItem):
+    return movieItem.name
 
 class MovieInfo():
     def __init__(self, path):
@@ -95,7 +104,7 @@ class MovieInfo():
             if episodeName:
                 self.name = episodeName
         # Subtitles here
-        self.subtitles = self.getSubtitles(self.dirPath)
+        self.subtitles = self.getSubtitles(self.dirPath, self.fileName)
         # Other movie infos
         self.url = self.info.url
         self.posterUrl = self.info.posterUrl
@@ -120,7 +129,7 @@ class MovieInfo():
             app.logger.error('Can not read episode number from ' + self.fileName)
             return None
 
-    def getSubtitles(self, dirPath):
+    def getSubtitles(self, dirPath, fileName):
         subtitles = []
         movieDirFiles = os.listdir(dirPath)
         app.logger.debug('Number of files in movie dir:' + str(len(movieDirFiles)))
@@ -131,23 +140,29 @@ class MovieInfo():
                 app.logger.debug('Handling file: ' + mfPath)
                 extsplit = os.path.splitext(movieFile)
                 if len(extsplit) > 1:
-                    ext = extsplit[1]
-                    app.logger.debug('Handling extension: ' + ext)
-                    if ext == '.vtt':
-                        subPath = urlPath
-                        subLabel = 'Unknown'
-                        subDefault = ''
-                        subLang = 'en'
-                        if movieFile.find('.fr') != -1:
-                            subLabel = 'French'
-                            subDefault = 'default'
-                            subLang = 'fr'
-                        if movieFile.find('.en') != -1:
-                            subLabel = 'English'
+                    # Only parse same base file name ie xxx.fr.vtt: double split
+                    extsplit2 = os.path.splitext(extsplit[0])
 
-                        subtitle = Subtitle(subPath, subLabel, subDefault, subLang)
-                        app.logger.debug('Adding subtitle ' + subLabel + ': ' + subPath)
-                        subtitles.append(subtitle)
+                    if extsplit2[0] != fileName:
+                        app.logger.debug("Not the same file " + extsplit2[0] + " and " + fileName)
+                    else:
+                        ext = extsplit[1]
+                        app.logger.debug('Handling extension: ' + ext)
+                        if ext == '.vtt':
+                            subPath = urlPath
+                            subLabel = 'Unknown'
+                            subDefault = ''
+                            subLang = 'en'
+                            if movieFile.find('.fr') != -1:
+                                subLabel = 'French'
+                                subDefault = 'default'
+                                subLang = 'fr'
+                            if movieFile.find('.en') != -1:
+                                subLabel = 'English'
+
+                            subtitle = Subtitle(subPath, subLabel, subDefault, subLang)
+                            app.logger.debug('Adding subtitle ' + subLabel + ': ' + subPath)
+                            subtitles.append(subtitle)
 
         return subtitles
 
@@ -173,6 +188,7 @@ class TmdbInfo():
     searchUrl = Template('https://api.themoviedb.org/3/search/$mtype?api_key=$apikey&query=$query')
     posterUrl = Template('https://image.tmdb.org/t/p/w$width$poster')
     mediaUrl = Template('https://www.themoviedb.org/$mtype/$tmdbid')
+    cacheDir = '/var/local/localtmdb/'
 
     def __init__(self, name, mtype = 'movie', hd=False):
         self.mtype = mtype
@@ -200,17 +216,33 @@ class TmdbInfo():
             self.posterUrl = ''
 
     def search_tmdb(self, name, mtype = 'movie'):
-        self.searchName = name
-        datePos = self.searchName.find(' (')
-        if datePos > -1:
-            self.searchName = self.searchName[:datePos]
+        r = None
+        cacheFile = TmdbInfo.cacheDir + name
+        noCache = True
+        try:
+            if os.path.isfile(cacheFile):
+                app.logger.debug('reading tmdbinfo cache in ' + cacheFile)
+                with open(cacheFile) as json_data:
+                    r = json.load(json_data)
+                    noCache = False
+        except:
+            app.logger.error('error during cache loading')
 
-        nameEscape = urllib.parse.quote(self.searchName)
-        searchQuery = TmdbInfo.searchUrl.substitute(mtype=mtype, apikey=TmdbInfo.tmdbapi, query=nameEscape)
-        app.logger.debug('querying ' + searchQuery)
-        result = requests.get(searchQuery)
-        app.logger.debug(result.json())
-        r = json.loads(result.content.decode('utf-8'))
+        if noCache:
+            self.searchName = name
+            datePos = self.searchName.find(' (')
+            if datePos > -1:
+                self.searchName = self.searchName[:datePos]
+
+            nameEscape = urllib.parse.quote(self.searchName)
+            searchQuery = TmdbInfo.searchUrl.substitute(mtype=mtype, apikey=TmdbInfo.tmdbapi, query=nameEscape)
+            app.logger.debug('querying ' + searchQuery)
+            result = requests.get(searchQuery)
+            app.logger.debug(result.json())
+            app.logger.debug('dumping tmdbinfo cache in ' + cacheFile)
+            r = json.loads(result.content.decode('utf-8'))
+            with open(cacheFile, 'w') as outFile:
+                json.dump(r, outFile)
         return r
 
 class TmdbSeasonInfo():
@@ -225,11 +257,22 @@ class TmdbSeasonInfo():
         self.parse_result()
 
     def get_season(self):
-        getQuery = TmdbSeasonInfo.seasonGetUrl.substitute(tv_id=self.tvid, season_number=self.season,apikey=TmdbInfo.tmdbapi)
-        app.logger.debug('querying ' + getQuery)
-        result = requests.get(getQuery)
-        app.logger.debug(result.json())
-        self.tmdb = json.loads(result.content.decode('utf-8'))
+        r = None
+        cacheFile = TmdbInfo.cacheDir + str(self.tvid) + '-' + str(self.season)
+        if os.path.isfile(cacheFile):
+            app.logger.debug('reading tmdbinfo cache in ' + cacheFile)
+            with open(cacheFile) as json_data:
+                r = json.load(json_data)
+        else:
+            getQuery = TmdbSeasonInfo.seasonGetUrl.substitute(tv_id=self.tvid, season_number=self.season,apikey=TmdbInfo.tmdbapi)
+            app.logger.debug('querying ' + getQuery)
+            result = requests.get(getQuery)
+            app.logger.debug(result.json())
+            app.logger.debug('dumping tmdbinfo cache in ' + cacheFile)
+            r = json.loads(result.content.decode('utf-8'))
+            with open(cacheFile, 'w') as outFile:
+                json.dump(r, outFile)
+        self.tmdb = r
 
     def parse_result(self):
         if not self.tmdb['id'] == None:
@@ -251,6 +294,8 @@ class DirectoryItem():
         self.key = getKey(path)
         self.name = name
         self.path = path
+        self.url = ''
+        self.posterUrl = ''
 
         seasonPos = name.find('Season ')
         if not seasonPos == -1:

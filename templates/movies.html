@@ -19,33 +19,45 @@
 		{% if dirs|length > 0 %}
 		<!--<h2>Directories</h2>-->
 			{% for dir in dirs %}
-		<div class='dirDiv'>
 			<a href='/{{ dir.key }}'>
+		<div class='dirDiv'>
+
 			{% if dir.posterUrl != '' %}
 			<img src="{{ dir.posterUrl }}"/></BR>
 			{% endif %}
-			{{ dir.name }}</a></BR>
-			{% if dir.tmdbid != -1 %}
+			{{ dir.name }}</BR>
+			{% if dir.url != "" %}
 			<a target='_blank' href="{{ dir.url }}">INFO</a>
 			{% endif %}
-		</div>
+		</div></a>
 			{% endfor %}
 		{% endif %}
 		{% if movies|length > 0 %}
 		<!--		<h2>Movies</h2>-->
+		{% if movies|length > 1 %}
+		<div class='episodeWrapperDiv'>
+		{% endif %}
+
 			{% for movie in movies %}
-		<div class='movieDiv'>
 			<a href='/info/{{ movie.key }}'>
+		{% if dirs|length == 1 %}
+		<div class='movieDiv'>
+		{% else %}
+		<div class='episodeDiv'>
+		{% endif %}
 					{% if movie.tmdb and movie.tmdb.poster != '' %}
 					<img src="https://image.tmdb.org/t/p/w185{{ movie.tmdb.poster }}"/>
 					{% endif %}
 					{{ movie.name }}
-			</a></BR>
+			</BR>
 			{% if movie.tmdb and movie.tmdb.id != -1 %}
 			<a target='_blank' href="https://www.themoviedb.org/movie/{{ movie.tmdb.id }}">INFO</a>
 			{% endif %}
-		</div>
+		</div></a>
 			{% endfor %}
+		{% if movies|length > 1 %}
+		</div>
+		{% endif %}
 		{% endif %}
 	</body>
 </html>

@@ -15,6 +15,15 @@ body {
 	color: white;
 }
 
+a {
+	text-decoration: none;
+	color: white;
+}
+
+a:hover {
+	color: orange;
+}
+
 .dirDiv {
 	border-width: 1px;
 	border-color: orange;
@@ -22,6 +31,9 @@ body {
 	float: left;
 	padding: 5px;
 	margin: 5px;
+	width: 190px;
+	height: 360px;
+	text-align: center;
 }
 .movieDiv {
 	border-width: 1px;
@@ -30,6 +42,30 @@ body {
 	float: left;
 	padding: 5px;
 	margin: 5px;
+	width: 228px;
+	height: 360px;
+	text-align: center;
+	display: block;
+	word-break: break-all;
+}
+
+.episodeWrapperDiv {
+	display: block;
+	width: 100%;
+	text-align: center;
+}
+
+.episodeDiv {
+	border-width: 1px;
+	border-color: orange;
+	border-style: dashed;
+	padding: 5px;
+	margin: 0 auto 5px auto;
+	width: 75%;
+	height: 30px;
+	text-align: left;
+	display: block;
+	word-break: break-all;
 }
 
 .divSeason {

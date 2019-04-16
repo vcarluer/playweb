@@ -1,4 +1,3 @@
-export FLASK_APP=playweb.py
 if [[ "$1" == "--prod" ]]; then
 	export FLASK_DEBUG=0
 	HOST='127.0.0.1'
@@ -11,4 +10,4 @@ else
 	nohup=''
 fi
 
-${nohup}python3 -m flask run --port $PORT --host $HOST
+FLASK_APP=playweb.py ${nohup}python3 -m flask run --port $PORT --host $HOST
