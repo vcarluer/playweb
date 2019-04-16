@@ -91,7 +91,9 @@ class MovieInfo():
         self.ext = extsplit[1]
         self.info = DirectoryItem(self.name, self.dirPath, hd=True)
         if self.info.istv:
-            self.name = self.getEpisodeName()
+            episodeName = self.getEpisodeName()
+            if episodeName:
+                self.name = episodeName
         # Subtitles here
         self.subtitles = self.getSubtitles(self.dirPath)
         # Other movie infos
@@ -99,11 +101,24 @@ class MovieInfo():
         self.posterUrl = self.info.posterUrl
 
     def getEpisodeName(self):
-        p = re.compile('.* - S(\d\d)E(\d\d) - .*')
+        p = re.compile('.*S(\d\d)E(\d\d).*')
         m = p.match(self.fileName)
-        self.episode = int(m.group(2))
-        app.logger.debug('Episode for ' + self.fileName + ' is ' + str(self.episode))
-        return self.info.tmdbtv.tmdb['episodes'][self.episode - 1]['name']
+        if m:
+            self.episode = int(m.group(2))
+        else:
+            p = re.compile('.*s(\d\d)e(\d\d).*')
+            m = p.match(self.fileName)
+            if m:
+                self.episode = int(m.group(2))
+            else:
+                self.episode = None
+
+        if self.episode:
+            app.logger.debug('Episode for ' + self.fileName + ' is ' + str(self.episode))
+            return self.info.tmdbtv.tmdb['episodes'][self.episode - 1]['name']
+        else:
+            app.logger.error('Can not read episode number from ' + self.fileName)
+            return None
 
     def getSubtitles(self, dirPath):
         subtitles = []
